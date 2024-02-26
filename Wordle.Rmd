@@ -1,0 +1,126 @@
+---
+title: "Creating a Wordle Game"
+author: "Alexandra Boville"
+date: "2024-02-12"
+output: html_document
+---
+
+# Creating a Wordle Game
+
+Loading libraries....
+```{r}
+library(tidyverse)
+library(dplyr)
+
+setwd("~/Desktop/BIO384K - Applied Data Analysis/Exercise 4/")
+```
+
+
+## Load Word Banks
+
+1. List of official scrabble words based off of the Collins English Dictionary
+2. List of 10,000 most common words in the English Language (no swear words)
+
+```{r}
+scrabble <- "/Users/allycat/Desktop/BIO384K - Applied Data Analysis/collins-scrabble-words-2019.txt"
+
+common_words <- "/Users/allycat/Desktop/BIO384K - Applied Data Analysis/google-10000-english-usa-no-swears.txt"
+```
+
+Solution wordswill refer to common_words
+valid words will refer to scrabble list
+
+## Creating a Function that reads these data files
+
+```{r}
+load_dictionary <- function(filename) {
+  read.delim(filename)
+}
+
+valid_list <- load_dictionary(scrabble)
+str(valid_list)
+
+solution_list <- load_dictionary(common_words)
+str(solution_list)
+
+```
+
+## Reducing list of Solution Words that are only found in Valid Word list
+
+```{r}
+solution_list <- intersect(valid_list, solution_list)
+solution_list
+```
+
+## Creating a Function that removes all words from Solution List that are not 5 letters in length, randomly choosing a word, and then splits the word into a vector of single-character elements
+
+```{r}
+pick_solution <- function(a) {
+  a <- a$words
+  a <- a[nchar(a)==5]
+  a <- sample(a, 1)
+  a <- str_split(a, "")
+}
+
+solution <- pick_solution(solution_list)
+solution
+
+
+```
+
+
+
+```{r}
+play_wordle <- function(solution, valid_list, num_guesses = 6) {
+  print(paste("Let's Play Wordle! You have", num_guesses, "to guess a 5 letter word. Good Luck!")) #intro text to start game
+  remaining_letters <- LETTERS #creating object for letters in alphabet
+  guesses <- 0 #start count for number of guesses used so far
+  
+  while (guesses < num_guesses) { #while the attempts made is less than the limit for number of guesses... keep playing!
+    print(paste(c("Remaining Letters:", remaining_letters), collapse = " ")) #print how many letters are left in the alphabet
+    guesses <- guesses + 1 #increase the guess count by one
+    guess_word <- readline(paste(" Enter your guess here: "))
+    if (nchar(guess_word) != 5) { #checking that word entered has only 5 characters
+      guess_word <- readline(paste0("Try another word! The word you guess must have 5 characters "))
+    }
+    guess_word <- toupper(guess_word) #ignoring case of word entered
+    guess_word <- str_split(guess_word, "")
+    
+    round_result <- evaluate_guess(guess_word, solution) #evaluating guess
+    remaining_letters <- setdiff(remaining_letters, guess_word)
+    
+    print(paste("Result: ", paste(rep("G", round_result$correct_guess), rep("Y", round_result$wrong_position), sep = ""), "\n"))
+    
+    if (round_result$correct_guess == 5) { #checking word and if it matches solution to print correct 
+      print(paste("Congratulations! You guessed the word '", solution, "' and it is the correct answer! \n"))
+      break
+    }
+    
+    print(paste("Keep Trying! You have this many guesses left:", num_guesses - guesses, "\n"))
+  }
+  
+  if (guesses == num_guesses) { #rprinting statemnet when you run out of guesses and lose game
+    print(paste("Sorry, you ran out of guesses. The word was '", solution, "'. Better luck next time!\n"))
+  }
+}
+``` 
+
+## Write a Function to Evaluate entered guess words compared to the solution word
+```{r}
+evaluate_guess <- function(guess_word, solution) { 
+  guess_vector <-str_split(guess_word, "") #splitting guessed word into vector of characters
+  solution_vector <-str_split(solution, "") #splitting solution word into a vector of characters
+  
+  correct_guess <- sum(guess_vector == solution_vector) #determining if any letters guess are correct and if they are in right position
+  wrong_position <- sum(guess_vector %in% solution_vector) - correct_guess
+  
+  return(list(correct_guess = correct_guess, wrong_position = wrong_position)) #returning letters that are correct and in correct position or correct but in wrong position
+}
+  
+```
+
+## Play Wordle!
+```{r}
+play_wordle(solution_list)
+```
+
